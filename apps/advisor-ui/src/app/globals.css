@@ -1,0 +1,162 @@
+/* FILE: apps/advisor-ui/src/app/globals.css */
+/* Ref: Blueprint §3.1 — Tailwind CSS + shadcn/ui design system */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@layer base {
+  :root {
+    /* ── Design Tokens — Advisor AI Dark Premium Theme ─────────────────────── */
+    --background: 222 47% 6%;
+    --foreground: 213 31% 91%;
+    --card: 222 47% 9%;
+    --card-foreground: 213 31% 91%;
+    --popover: 222 47% 9%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 210 100% 56%;
+    --primary-foreground: 222 47% 6%;
+    --secondary: 222 47% 13%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 222 47% 13%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 210 100% 56%;
+    --accent-foreground: 222 47% 6%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 213 31% 91%;
+    --border: 222 47% 14%;
+    --input: 222 47% 14%;
+    --ring: 210 100% 56%;
+    --radius: 0.75rem;
+
+    /* ── Advisor AI Brand Colors ─────────────────────────────────────────── */
+    --ai-blue: 210 100% 56%;
+    --ai-blue-glow: 210 100% 56% / 0.2;
+    --ai-green: 152 76% 47%;
+    --ai-green-glow: 152 76% 47% / 0.15;
+    --ai-amber: 38 92% 50%;
+    --ai-amber-glow: 38 92% 50% / 0.15;
+    --ai-red: 0 84% 60%;
+    --ai-red-glow: 0 84% 60% / 0.15;
+    --ai-purple: 271 81% 66%;
+    --ai-surface: 222 47% 11%;
+    --ai-surface-2: 222 47% 14%;
+    --ai-surface-3: 222 47% 17%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+}
+
+/* ── Glassmorphism Components ─────────────────────────────────────────────── */
+.glass {
+  background: hsl(222 47% 11% / 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsl(222 47% 20% / 0.5);
+}
+
+.glass-strong {
+  background: hsl(222 47% 8% / 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid hsl(210 100% 56% / 0.15);
+}
+
+/* ── Glow Effects ─────────────────────────────────────────────────────────── */
+.glow-blue {
+  box-shadow: 0 0 20px hsl(210 100% 56% / 0.25), 0 0 60px hsl(210 100% 56% / 0.1);
+}
+.glow-green {
+  box-shadow: 0 0 20px hsl(152 76% 47% / 0.25), 0 0 60px hsl(152 76% 47% / 0.1);
+}
+.glow-amber {
+  box-shadow: 0 0 20px hsl(38 92% 50% / 0.25), 0 0 60px hsl(38 92% 50% / 0.1);
+}
+
+/* ── Chat SSE Streaming Cursor ──────────────────────────────────────────── */
+.streaming-cursor::after {
+  content: '▋';
+  display: inline-block;
+  animation: blink 0.8s ease-in-out infinite;
+  color: hsl(var(--ai-blue));
+  margin-left: 1px;
+}
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* ── Gradient Backgrounds ─────────────────────────────────────────────────── */
+.gradient-hero {
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    hsl(210 100% 56% / 0.12) 0%,
+    transparent 60%
+  ), hsl(var(--background));
+}
+
+.gradient-card {
+  background: linear-gradient(
+    135deg,
+    hsl(222 47% 11%) 0%,
+    hsl(222 47% 9%) 100%
+  );
+}
+
+/* ── Metric Cards ─────────────────────────────────────────────────────────── */
+.metric-positive { color: hsl(var(--ai-green)); }
+.metric-negative { color: hsl(var(--ai-red)); }
+.metric-neutral  { color: hsl(var(--ai-blue)); }
+
+/* ── Compliance Status Colors ─────────────────────────────────────────────── */
+.status-pass     { color: hsl(var(--ai-green)); }
+.status-warn     { color: hsl(var(--ai-amber)); }
+.status-blocked  { color: hsl(var(--ai-red)); }
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: hsl(var(--background)); }
+::-webkit-scrollbar-thumb {
+  background: hsl(222 47% 25%);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: hsl(210 100% 56% / 0.5); }
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes pulse-ring {
+  0%   { transform: scale(1);    opacity: 0.8; }
+  100% { transform: scale(1.5);  opacity: 0; }
+}
+
+.animate-fade-in-up   { animation: fadeInUp 0.3s ease-out forwards; }
+.animate-slide-in-right { animation: slideInRight 0.25s ease-out forwards; }
+
+/* ── Voice Recording Indicator ────────────────────────────────────────────── */
+.voice-recording .ring {
+  animation: pulse-ring 1.2s ease-out infinite;
+}
+
+/* ── Chart overrides for dark theme ──────────────────────────────────────── */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: hsl(222 47% 18%);
+}
+.recharts-text { fill: hsl(215 20% 55%); font-size: 11px; }

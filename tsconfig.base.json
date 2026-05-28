@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "paths": {
+      "@advisor-ai/types": ["libs/types/src/index.ts"],
+      "@advisor-ai/db-client": ["libs/db-client/src/index.ts"],
+      "@advisor-ai/utils": ["libs/utils/src/index.ts"],
+      "@advisor-ai/proto": ["libs/proto"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next", "**/*.spec.ts", "**/*.test.ts"]
+}

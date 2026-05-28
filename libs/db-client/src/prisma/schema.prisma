@@ -1,0 +1,421 @@
+// FILE: libs/db-client/src/prisma/schema.prisma
+// Ref: Blueprint §4 — Database & Schema Planning (complete entity design)
+// Ref: Blueprint §6 Task 2 — Prisma 5.x schema with RLS + partitioning
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+generator py_client {
+  provider             = "prisma-client-python"
+  interface            = "asyncio"
+  recursive_type_depth = 5
+  enable_experimental_decimal = true
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  directUrl         = env("DIRECT_DATABASE_URL")
+}
+
+// ─── Firm (Multi-tenant root) ─────────────────────────────────────────────────
+// Ref: Blueprint §4.4 — Multi-tenant isolation: firm_id discriminator on all tables
+model Firm {
+  firm_id       String   @id @default(uuid())
+  name          String
+  regulatory_id String   @unique
+  tier          String   @default("STANDARD")
+  settings      Json     @default("{}")
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  advisors          Advisor[]
+  clients           Client[]
+  compliance_rules  ComplianceRule[]
+  conversations     Conversation[]
+  documents         Document[]
+  alerts            Alert[]
+
+  @@map("firm")
+}
+
+// ─── Advisor ──────────────────────────────────────────────────────────────────
+// Ref: Blueprint §4.1 — advisor entity
+model Advisor {
+  advisor_id String   @id @default(uuid())
+  firm_id    String
+  name       String
+  email      String   @unique
+  password_hash String?
+  role       UserRole @default(ADVISOR)
+  licenses   Json     @default("[]")
+  status     AdvisorStatus @default(ACTIVE)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  firm             Firm              @relation(fields: [firm_id], references: [firm_id], onDelete: Restrict)
+  clients          Client[]
+  conversations    Conversation[]
+  ai_recommendations AiRecommendation[]
+  compliance_events ComplianceEvent[]
+  documents        Document[]
+  alerts           Alert[]
+
+  @@index([firm_id])
+  @@map("advisor")
+}
+
+// ─── Client ───────────────────────────────────────────────────────────────────
+// Ref: Blueprint §4.1 — client entity
+// Ref: Blueprint §4.2 — Client Intelligence: segmentation, life-event detection
+model Client {
+  client_id          String      @id @default(uuid())
+  firm_id            String
+  advisor_id         String
+  name               String
+  email              String?
+  profile            Json        @default("{}")  // Flexible financial profile data
+  risk_profile       RiskProfile @default(MODERATE)
+  kyc_status         KycStatus   @default(PENDING)
+  segment            String      @default("RETAIL")
+  life_stage         String?
+  behavioral_flags   String[]    @default([])
+  life_events        String[]    @default([])
+  created_at         DateTime    @default(now())
+  updated_at         DateTime    @updatedAt
+
+  firm               Firm              @relation(fields: [firm_id], references: [firm_id], onDelete: Restrict)
+  advisor            Advisor           @relation(fields: [advisor_id], references: [advisor_id], onDelete: Restrict)
+  accounts           Account[]
+  conversations      Conversation[]
+  ai_recommendations AiRecommendation[]
+  documents          Document[]
+  alerts             Alert[]
+
+  @@index([advisor_id])
+  @@index([firm_id])
+  @@map("client")
+}
+
+// ─── Account ──────────────────────────────────────────────────────────────────
+// Ref: Blueprint §4.1 — account entity
+model Account {
+  account_id   String        @id @default(uuid())
+  client_id    String
+  account_type String
+  custodian    String
+  currency     String        @default("USD")
+  status       AccountStatus @default(ACTIVE)
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+
+  client             Client             @relation(fields: [client_id], references: [client_id], onDelete: Restrict)
+  portfolio_snapshots PortfolioSnapshot[]
+  transactions       Transaction[]
+
+  @@index([client_id])
+  @@map("account")
+}
+
+// ─── Portfolio Snapshot ───────────────────────────────────────────────────────
+// Ref: Blueprint §4.1 — portfolio_snapshot entity
+// Ref: Blueprint §4.4 — Partition by snapshot_ts monthly via pg_partman
+model PortfolioSnapshot {
+  snapshot_id  String   @id @default(uuid())
+  account_id   String
+  snapshot_ts  DateTime @default(now())
+  nav          Decimal  @db.Decimal(18, 4)
+  holdings     Json     @default("[]")      // Array of HoldingDto
+  risk_metrics Json     @default("{}")      // RiskMetricsDto
+
+  account Account @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+
+  @@index([account_id, snapshot_ts(sort: Desc)])
+  @@map("portfolio_snapshot")
+}
+
+// ─── Instrument ───────────────────────────────────────────────────────────────
+// Ref: Blueprint §4.1 — instrument entity
+model Instrument {
+  instrument_id String   @id @default(uuid())
+  ticker        String   @unique
+  isin          String?  @unique
+  name          String
+  asset_class   String
+  market_data   Json     @default("{}")
+  updated_at    DateTime @updatedAt
+
+  transactions Transaction[]
+
+  @@index([ticker])
+  @@map("instrument")
+}
+
+// ─── Transaction ──────────────────────────────────────────────────────────────
+// Ref: Blueprint §4.1 — transaction entity
+// Ref: Blueprint §4.4 — Partition by executed_at monthly
+model Transaction {
+  txn_id        String          @id @default(uuid())
+  account_id    String
+  instrument_id String
+  type          TransactionType
+  quantity      Decimal         @db.Decimal(18, 6)
+  price         Decimal         @db.Decimal(18, 4)
+  executed_at   DateTime        @default(now())
+  status        String          @default("SETTLED")
+  metadata      Json            @default("{}")
+
+  account    Account    @relation(fields: [account_id], references: [account_id], onDelete: Restrict)
+  instrument Instrument @relation(fields: [instrument_id], references: [instrument_id], onDelete: Restrict)
+
+  @@index([account_id, executed_at(sort: Desc)])
+  @@map("transaction")
+}
+
+// ─── Compliance Rule ──────────────────────────────────────────────────────────
+// Ref: Blueprint §6 Task 5 — Rules stored in DB with hot-reload (no restart needed)
+model ComplianceRule {
+  rule_id     String            @id @default(uuid())
+  firm_id     String
+  category    String
+  name        String
+  description String
+  severity    ComplianceSeverity @default(WARN)
+  active      Boolean           @default(true)
+  rule_logic  Json              // json-rules-engine rule definition
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+
+  firm             Firm              @relation(fields: [firm_id], references: [firm_id], onDelete: Cascade)
+  compliance_events ComplianceEvent[]
+
+  @@index([firm_id, active])
+  @@map("compliance_rule")
+}
+
+// ─── Compliance Event ─────────────────────────────────────────────────────────
+// Ref: Blueprint §4.1 — compliance_event entity
+// Ref: Blueprint §6 Task 5 — All decisions logged including PASS (audit completeness)
+model ComplianceEvent {
+  event_id    String            @id @default(uuid())
+  rule_id     String
+  advisor_id  String
+  outcome     ComplianceOutcome @default(PASS)
+  triggered_at DateTime         @default(now())
+  context     Json              @default("{}")
+  resolved_at DateTime?
+  resolution  String?
+
+  rule    ComplianceRule @relation(fields: [rule_id], references: [rule_id], onDelete: Restrict)
+  advisor Advisor        @relation(fields: [advisor_id], references: [advisor_id], onDelete: Restrict)
+
+  @@index([advisor_id, triggered_at(sort: Desc)])
+  // Ref: Blueprint §4.3 — Partial index for active alerts
+  @@index([resolved_at])
+  @@map("compliance_event")
+}
+
+// ─── Conversation ─────────────────────────────────────────────────────────────
+// Ref: Blueprint §4.1 — conversation entity
+// Ref: Blueprint §1.3 — Multi-turn, session context retention
+model Conversation {
+  conv_id    String   @id @default(uuid())
+  advisor_id String
+  firm_id    String
+  client_id  String?
+  started_at DateTime @default(now())
+  context    Json     @default("{}")
+  status     String   @default("ACTIVE")
+
+  advisor Advisor @relation(fields: [advisor_id], references: [advisor_id], onDelete: Cascade)
+  firm    Firm    @relation(fields: [firm_id], references: [firm_id], onDelete: Cascade)
+  client  Client? @relation(fields: [client_id], references: [client_id], onDelete: SetNull)
+  turns   ConversationTurn[]
+
+  @@index([advisor_id])
+  @@map("conversation")
+}
+
+// ─── Conversation Turn ────────────────────────────────────────────────────────
+// Ref: Blueprint §4.1 — conversation_turn entity
+// Ref: Blueprint §4.4 — Partition by created_at
+model ConversationTurn {
+  turn_id    String           @id @default(uuid())
+  conv_id    String
+  role       ConversationRole
+  content    String           @db.Text
+  tokens_used Int?
+  model_used  String?
+  latency_ms  Int?
+  created_at  DateTime        @default(now())
+
+  conversation Conversation @relation(fields: [conv_id], references: [conv_id], onDelete: Cascade)
+
+  @@index([conv_id, created_at])
+  @@map("conversation_turn")
+}
+
+// ─── AI Recommendation ────────────────────────────────────────────────────────
+// Ref: Blueprint §4.1 — ai_recommendation entity
+// Ref: Blueprint §3.4 — SHAP values stored per recommendation
+model AiRecommendation {
+  rec_id           String             @id @default(uuid())
+  advisor_id       String
+  client_id        String
+  rec_type         RecommendationType
+  payload          Json               // Full NextBestActionDto
+  shap_explanation Json               @default("{}")  // SHAP values for explainability
+  acted_on         Boolean            @default(false)
+  created_at       DateTime           @default(now())
+  expires_at       DateTime?
+
+  advisor Advisor @relation(fields: [advisor_id], references: [advisor_id], onDelete: Cascade)
+  client  Client  @relation(fields: [client_id], references: [client_id], onDelete: Cascade)
+
+  @@index([advisor_id, client_id])
+  @@map("ai_recommendation")
+}
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+// Ref: Blueprint §4.1 — audit_log: append-only, no UPDATE/DELETE
+// Ref: Blueprint §6 Task 2 — Constraint: UPDATE and DELETE rejected at DB level
+// Ref: Blueprint §5 — Immutable audit trail: append-only PostgreSQL partition + S3
+model AuditLog {
+  log_id      String   @id @default(uuid())
+  actor_id    String
+  entity_type String   // Polymorphic reference: "CLIENT" | "RECOMMENDATION" | etc.
+  entity_id   String
+  action      String   // "READ" | "CREATE" | "COMPLIANCE_CHECK" | "LLM_RESPONSE" | etc.
+  before_data Json?
+  after_data  Json?
+  ip_address  String?
+  metadata    Json     @default("{}")
+  ts          DateTime @default(now())
+
+  @@index([entity_type, entity_id, ts(sort: Desc)])
+  @@index([actor_id, ts(sort: Desc)])
+  @@map("audit_log")
+}
+
+// ─── Document (Unstructured Data) ─────────────────────────────────────────────
+model Document {
+  doc_id      String   @id @default(uuid())
+  client_id   String?
+  advisor_id  String?
+  firm_id     String
+  doc_type    DocumentType
+  title       String
+  content     String   @db.Text
+  metadata    Json     @default("{}")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  client      Client?  @relation(fields: [client_id], references: [client_id], onDelete: Cascade)
+  advisor     Advisor? @relation(fields: [advisor_id], references: [advisor_id], onDelete: Cascade)
+  firm        Firm     @relation(fields: [firm_id], references: [firm_id], onDelete: Cascade)
+
+  @@index([client_id])
+  @@index([firm_id])
+  @@map("document")
+}
+
+// ─── Alert (Streaming/Real-time Alerts) ───────────────────────────────────────
+model Alert {
+  alert_id    String   @id @default(uuid())
+  firm_id     String
+  advisor_id  String?
+  client_id   String?
+  alert_type  String   // e.g. "MARKET_MOVEMENT", "TRADE_EVENT", "RISK_BREACH"
+  severity    ComplianceSeverity @default(INFO)
+  message     String
+  is_read     Boolean  @default(false)
+  created_at  DateTime @default(now())
+
+  firm        Firm     @relation(fields: [firm_id], references: [firm_id], onDelete: Cascade)
+  advisor     Advisor? @relation(fields: [advisor_id], references: [advisor_id], onDelete: Cascade)
+  client      Client?  @relation(fields: [client_id], references: [client_id], onDelete: Cascade)
+
+  @@index([firm_id, created_at(sort: Desc)])
+  @@index([advisor_id, is_read])
+  @@map("alert")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADVISOR
+  COMPLIANCE
+  OPERATIONS
+  RELATIONSHIP_MANAGER
+  ADMIN
+}
+
+enum RiskProfile {
+  CONSERVATIVE
+  MODERATE
+  AGGRESSIVE
+  VERY_AGGRESSIVE
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum AdvisorStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum AccountStatus {
+  ACTIVE
+  CLOSED
+  FROZEN
+}
+
+enum TransactionType {
+  BUY
+  SELL
+  DIVIDEND
+  REBALANCE
+  FEE
+}
+
+enum ComplianceSeverity {
+  INFO
+  WARN
+  BLOCK
+}
+
+enum ComplianceOutcome {
+  PASS
+  WARN
+  BLOCKED
+}
+
+enum RecommendationType {
+  CROSS_SELL
+  UPSELL
+  REBALANCE
+  OUTREACH
+  RISK_ALERT
+}
+
+enum ConversationRole {
+  user
+  assistant
+  system
+}
+
+enum DocumentType {
+  RESEARCH_REPORT
+  ADVISOR_NOTE
+  EMAIL
+  CONTRACT
+  OTHER
+}

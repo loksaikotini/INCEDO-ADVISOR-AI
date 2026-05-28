@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Next.js / Build Outputs
+.next/
+out/
+build/
+dist/
+
+# Prisma
+/libs/db-client/src/generated/
+
+# OS/Editor Files
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Nx cache
+.nx/
+
+# LLM Scratch and temp files
+scratch/
+null
+
+# Python packages
+*.egg-info/
+*.egg
+
+# Database/Vector stores
+data/chroma_db/

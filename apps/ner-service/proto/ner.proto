@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package ner;
+
+message NerEntity {
+    string text = 1;
+    string label = 2;
+    int32 start = 3;
+    int32 end = 4;
+    float confidence = 5;
+}
+
+message NerRequest {
+    string text = 1;
+    string session_id = 2;
+}
+
+message NerResponse {
+    repeated NerEntity entities = 1;
+    int32 processed_in_ms = 2;
+}
+
+service NerService {
+    rpc RecognizeEntities(NerRequest) returns (NerResponse);
+}
