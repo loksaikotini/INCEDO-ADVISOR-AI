@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
     await db.disconnect()
 
 
-app = FastAPI(title="Advisor AI Copilot Backend", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Incedo Advisor AI Backend", version="1.0.0", lifespan=lifespan)
 
 # Setup CORS
 CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]

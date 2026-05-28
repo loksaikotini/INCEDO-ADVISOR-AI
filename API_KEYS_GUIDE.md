@@ -1,6 +1,6 @@
 # API Keys & .env Setup Guide 🔑
 
-To make the AI Advisor Copilot work, it needs to talk to real AI models on the internet. To do this securely, it uses **API Keys**. Think of an API Key like a secret password that gives your app permission to use an AI company's supercomputers.
+To make Incedo Advisor AI work, it needs to talk to real AI models on the internet. To do this securely, it uses **API Keys**. Think of an API Key like a secret password that gives your app permission to use an AI company's supercomputers.
 
 This guide will show you exactly how to get these keys for free and how to put them in your `.env` file.
 
@@ -8,7 +8,7 @@ This guide will show you exactly how to get these keys for free and how to put t
 
 ## 1️⃣ How to get your Google Gemini API Key
 
-We use Google's Gemini AI to power the main conversational brain of the Copilot. 
+We use Google's Gemini AI to power the main conversational brain of Incedo Advisor AI. 
 
 1. **Go to the Website**: Open your browser and go to [Google AI Studio](https://aistudio.google.com/).
 2. **Sign In**: Log in with your standard Google (Gmail) account.

@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ====================================================================
-echo Starting Antigravity Microservices ^& UI Dashboard
+echo Starting Incedo Advisor AI Microservices ^& UI Dashboard
 echo ====================================================================
 echo.
 

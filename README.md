@@ -1,6 +1,6 @@
-# Anti-Gravity AI Wealth Advisor Copilot 🚀
+# Incedo Advisor AI 🚀
 
-Welcome to the **Anti-Gravity AI Wealth Advisor Copilot**! 
+Welcome to **Incedo Advisor AI**! 
 
 This is a modern, intelligent web application designed to help financial advisors manage client portfolios, monitor compliance alerts, and get instant answers using AI. 
 
@@ -107,4 +107,4 @@ The script will automatically open 5 different terminal windows, starting up the
 Once it says "Ready", open your web browser (like Chrome or Edge) and go to:
 👉 **http://localhost:3000**
 
-You can now log in and explore the AI Advisor Copilot! 🎉
+You can now log in and explore Incedo Advisor AI! 🎉

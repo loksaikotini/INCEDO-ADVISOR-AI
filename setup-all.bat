@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ====================================================================
-echo Antigravity AI Wealth Advisor Copilot - Full Setup Script 🚀
+echo Incedo Advisor AI - Full Setup Script 🚀
 echo ====================================================================
 echo.
 
